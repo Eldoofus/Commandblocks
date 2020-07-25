@@ -4,10 +4,10 @@ const skills={
 	"coalbomb":{
 		type:"skill.atk",
 		tier:1,
-		cooltime:0.5,
+		cooltime:3.8,
 		uses:{
 			item:"coal",
-			amount:3
+			amount:4
 		},
 		cost:[
 			{
@@ -23,10 +23,10 @@ const skills={
 	"coalfire":{
 		type:"skill.atk",
 		tier:2,
-		cooltime:1.5,
+		cooltime:12.5,
 		uses:{
 			item:"coal",
-			amount:3
+			amount:7
 		},
 		cost:[
       {
@@ -67,7 +67,7 @@ const skills={
   "metabomb":{
     type:"skill.support",
     tier:3,
-    cooltime:11,
+    cooltime:28.6,
     uses:{
       item:"metaglass",
       amount:9
@@ -102,7 +102,8 @@ const skills={
         amount:270
       }
     ],
-    parent:"thorshot"
+    parent:"thorshot",
+    unfinished: true
   },
   "thorshot":{
 		type:"skill.atk",
@@ -238,7 +239,8 @@ const skills={
 				amount:50
 			}
 		],
-    parent:"phaseshot"
+    parent:"phaseshot",
+    unfinished: true
 	},
   "pyraheal":{
 		type:"skill.support",
@@ -376,7 +378,7 @@ const skills={
     healthcost:18,
 		uses:{
 			item:"surge-alloy",
-			amount:12
+			amount:6
 		},
 		cost:[
 			{
@@ -397,11 +399,11 @@ const skills={
   "surgeemp":{
     type:"skill.support",
     tier:3,
-    cooltime:15,
-    duration:7.5,
+    cooltime:19.3,
+    duration:13,
     uses:{
       item:"surge-alloy",
-      amount:10
+      amount:13
     },
     cost:[
       {
@@ -432,7 +434,8 @@ const skills={
         item:"commandblocks-ref-scalar",
         amount:70
       }
-    ]
+    ],
+    unfinished: true
   },
   "scalshield":{
     type:"skill.def",
@@ -480,7 +483,8 @@ const skills={
         item:"commandblocks-ref-vector",
         amount:40
       }
-    ]
+    ],
+    unfinished: true
   },
   "vecslash":{
     type:"skill.def",
@@ -524,7 +528,8 @@ const skills={
         amount:256
       }
     ],
-    parent:"vecslash"
+    parent:"vecslash",
+    unfinished: true
   },
   "zetarecharge":{
     type:"skill.support",
@@ -569,7 +574,8 @@ const skills={
         amount:56
       }
     ],
-    parent:"zetarecharge"
+    parent:"zetarecharge",
+    unfinished: true
   },
   "zetatrap":{
     type:"skill.support",
@@ -647,7 +653,8 @@ const skills={
         amount:9,
       }
     ],
-    parent:"spaceblink"
+    parent:"spaceblink",
+    unfinished: true
   },
   "timeworld":{
     type:"skill.secret",
@@ -675,7 +682,8 @@ const skills={
         amount:18,
       }
     ],
-    parent:"spaceportal"
+    parent:"spaceportal",
+    unfinished: true
   },
   "opticpresicion":{
 		type:"skill.atk",
@@ -930,6 +938,31 @@ uses:{
 		],
     parent:"coalfire"
 	},
+	"uranwave":{
+		type:"skill.atk",
+		tier:3,
+		cooltime:50,
+		healthcost:50,
+		uses:{
+			item:"steam-power-uranium",
+			amount:40
+		},
+		cost:[
+			{
+				item:"steam-power-iron",
+				amount:260
+			},
+			{
+				item:"plastanium",
+				amount:60
+			},
+			{
+				item:"steam-power-uranium",
+				amount:500
+			}
+		],
+    parent:"uranblast"
+	},
   "zincray":{
     type:"skill.atk",
     tier: 1,
@@ -1024,6 +1057,14 @@ const spellstart = newEffect(23, e => {
   Draw.color(e.color);
   Lines.stroke(e.fout() * 5);
   Lines.circle(e.x, e.y, 3 + e.fin() * 80);
+});
+const uranwaveexpand = newEffect(30, e => {
+  Draw.color(Color.valueOf("fffbf7"));
+  var radiusofcircle = e.fin() * 70;
+  if(radiusofcircle > 50){
+	  radiusofcircle += -1*(e.fin() * 20 + 50)
+  }
+  Fill.circle(e.x, e.y, radiusofcircle);
 });
 const customfx = this.global.fx;
 const slasheffect = customfx.slash;
@@ -1189,6 +1230,7 @@ const gravityTrap = customb.gravityTrap;
 const arcCasterBullet = customb.arcCasterBullet;
 const forceSmall = customb.forceSmall;
 const effectZone = customb.effectZone;
+const empStatus = Vars.content.getByName(ContentType.status, "commandblocks-empjam");
 
 const vanillaskills=30;
 const doubletaptick=15;
@@ -1198,6 +1240,7 @@ const skillfunc={
   _lasty:0,
   _lastcharged:0,
   getInput(){
+    if(Vars.player.hasEffect(empStatus)) return false;
     if(Vars.mobile){
       if(Core.input.justTouched()){
         var inc=Math.max(Math.abs(Core.input.mouseX()-this._lastx),Math.abs(Core.input.mouseY()-this._lasty));
@@ -1255,11 +1298,10 @@ const skillfunc={
     Bullet.create(bullet, player, player.getTeam(), player.getX(), player.getY(), player.rotation + offset, v,life);
   },
   coalbomb(player){
-    this.fire(Bullets.bombExplosive, player, 11, 3);
+    this.fire(customb.grenade, player, 0.5, 1);
   },
   coalfire(player){
-    this.fire(Bullets.bombOil, player, 9, 3);
-    this.fire(Bullets.bombIncendiary, player, 9, 3);
+    this.fire(customb.molotov, player, 0.58, 1.2);
   },
   coalcrawler(player){
     if(player.tileOn().solid()){
@@ -1274,6 +1316,9 @@ const skillfunc={
     var crawler=UnitTypes.crawler.create(player.getTeam());
     crawler.set(player.getX(),player.getY());
     crawler.add();
+  },
+  metabomb(player){
+    this.fire(customb.flashbang, player, 1, 1);
   },
   phasetp(player){
     //f4ba6e windowHide
@@ -1388,6 +1433,9 @@ const skillfunc={
     Sounds.spark.at(player.getX(),player.getY(),0.2);
     this.fire(arcCasterBullet, player, 0.65, 5);
   },
+  surgeemp(player){
+    this.fire(customb.emp, player, 0.5, 1);
+  },
   scalshield(player){
     var x=player.getX(); var y=player.getY();
     Sounds.message.at(x, y, 1.6);
@@ -1448,6 +1496,15 @@ const skillfunc={
     Sounds.explosionBig.at(x,y);
     if(Vars.net.client()) return;
     Damage.damage(player.getTeam(),x,y,120,690);
+  },
+  uranwave(player){
+    var x=player.getX(); var y=player.getY();
+    player.damage(player.maxHealth()*0.5);
+    Effects.effect(uranwaveexpand, x, y);
+    Damage.createIncend(x, y, 50, 6);
+    Sounds.explosionBig.at(x,y);
+    if(Vars.net.client()) return;
+    Damage.damage(player.getTeam(),x,y,50,500);
   },
   zincray(player){
     Sounds.spark.at(player.getX(),player.getY(),1.4);

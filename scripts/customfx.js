@@ -1,3 +1,4 @@
+var t = this;
 var shieldColor = Color.valueOf("ffd37f").a(0.7);
 const shieldInColor = Color.black.cpy().a(0);
 const spaceshader = this.global.shaders.space;
@@ -22,11 +23,39 @@ function fillLight(x, y, sides, radius, center, edge){
   }
 }
 
+function drawSpark(x, y, size, width, r){
+  Drawf.tri(x, y, width, size, r);
+  Drawf.tri(x, y, width, size, r+180);
+  Drawf.tri(x, y, width, size, r+90);
+  Drawf.tri(x, y, width, size, r+270);
+}
+
+
 function newGroundEffect(lifetime, staticLife, renderer){
   return new GroundEffectEntity.GroundEffect(lifetime, staticLife, new Effects.EffectRenderer({render: renderer}));
 }
+//thanks to EyeofDarkness(aka Darky Daddy)
+const newEffectSize = (life, size, renderer) => new Effects.Effect(life, size, new Effects.EffectRenderer({render: renderer}));
 
 this.global.fx = {
+  evalfx : newEffect(30, e => {
+    if(e.data == null || !e.data.text || !e.data.parent) return;
+    try{
+      eval(e.data.text);
+    }
+    catch(err){
+      e.data.parent.setErr(err);
+    }
+  }),
+  evalfxLong : newEffect(90, e => {
+    if(e.data == null || !e.data.text || !e.data.parent) return;
+    try{
+      eval(e.data.text);
+    }
+    catch(err){
+      e.data.parent.setErr(err);
+    }
+  }),
   draw : newGroundEffect(0, 1, e => {
     if(e.data == null) return;
     try{
@@ -205,5 +234,38 @@ this.global.fx = {
       v1.setAngle((r1+i*45)%360);
       Fill.circle(e.x+v1.x, e.y+v1.y, c1);
     }
+  }),
+  smokeRise : newEffectSize(150, 150, e => {
+    Draw.color(Color.gray, Pal.darkishGray.cpy().a(0), e.fin());
+    var size = 7 + e.fin()*8;
+    Draw.rect("circle", e.x+e.fin()*26, e.y+e.fin()*30, size, size);
+  }),
+  campfire : newEffectSize(90, 50, e => {
+    if(e.data == null) return;
+    Angles.randLenVectors(e.id, e.id%3+1, 0.5+4*e.fin(), floatc2((x,y) => {
+      Draw.color(e.color, e.data, y*y);
+      Fill.circle(e.x+x, e.y+Math.abs(y*10)+e.fin()*3, e.fout()*(5+(e.id%4)*0.5));
+    }));
+  }),
+  flashbang : newEffectSize(5, 170, e => {
+    fillLight(e.x, e.y, Lines.circleVertices(85), 85, Color.white, Color.white.cpy().a(0));
+    fillLight(e.x, e.y, Lines.circleVertices(85), 85, Color.white, Color.white.cpy().a(0));
+    Draw.color();
+  }),
+  flashSpark : newEffect(40, e => {
+    Draw.color(Color.white);
+    var i=1;
+    Angles.randLenVectors(e.id, e.id%2+1, 4+8*e.fin(), floatc2((x,y) => {
+      drawSpark(e.x+x, e.y+y, e.fout()*2.5, 0.5+e.fout(), e.id*i);
+      i++;
+    }));
+  }),
+  empBlast : newEffect(25, e => {
+    Draw.color(Pal.lancerLaser, Pal.surge, e.fout());
+    Lines.stroke(e.fout()*4.5);
+    var rand = Mathf.random();
+    Lines.poly(e.x, e.y, rand*5+10, e.fin()*e.rotation, e.fout()*300);
+    Lines.stroke(e.fout()*2);
+    Lines.poly(e.x, e.y, rand*5+10, e.fin()*e.rotation*0.85, e.fout()*300);
   })
 };

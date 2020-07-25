@@ -6,6 +6,7 @@ gamerule.sendCommandFeedback=false;
 var effectextended={};
 const KeyCode=Packages.arc.input.KeyCode;
 var variables={};
+//Pal.anuke = Color.valueOf("ff7f50");
 
 if(!this.global.hasOwnProperty("commandcached")) this.global.commandcached={};
 const commandcached=this.global.commandcached;
@@ -509,6 +510,9 @@ const commandblocks={
       cmd = args[0];
       args = args.splice(1);
     }
+    var cmdparse = args.length;
+    if(cmd == "at") cmdparse = 2;
+    if(cmd == "as") cmdparse = 1;
 
   try{
     if(gamerule.doCommands==false&&cmd!="gamerule") return false;
@@ -518,7 +522,7 @@ const commandblocks={
     }
     if(gamerule.sendCommandFeedback) this.report("Command "+msg+" executed by "+tile);
 
-    for(var i=0;i<args.length;i++){
+    for(var i=0;i<cmdparse;i++){
       if(args[i].substring(0,1)=="$"){
         variables.e = tile;
         variables.this = this;
@@ -526,8 +530,15 @@ const commandblocks={
       }
     }
     switch(cmd){
+      case 'do':
+        return true;
+      break;
+      case 'check':
+        if(args[0]) return true;
+        else return false;
+      break;
       case 'overwrite':
-        parentthis.setMessageBlockText(null,tile,args.join(' '));
+        Call.setMessageBlockText(null,parentthis,args.join(' '));
         return true;
       break;
       case 'say':
@@ -569,7 +580,8 @@ const commandblocks={
       case 'setblock':
         //Call.setTile(Vars.world.tile(tile.x, tile.y), Blocks.air, tile.team, rot);
         if(args.length>=3&&args.length<=6){
-          var tpos=this.tilde(tile,args[0],args[1]); var cblock=args[2]; var crot=0; var cteam=tile.team;
+          var tpos=this.tilde(tile,args[0],args[1]); var crot=0; var cteam=tile.team;
+          var cblock=Vars.content.getByName(ContentType.block, args[2]);
           var cx=0; var cy=0;
           if(!isNaN(Number(tpos.x))&&!isNaN(Number(tpos.y))){
             cx=tpos.x; cy=tpos.y;
@@ -577,9 +589,9 @@ const commandblocks={
           else throw "Coordinates should be above 0";
           if(cx>=0&&cy>=0){
             var ctile=Vars.world.tile(cx,cy);
-            if(ctile.block()==Blocks[cblock]) throw "Cannot set the block";
+            if(ctile.block()==cblock) throw "Cannot set the block";
             if(args.length<=5||args[5]=="replace"||args[5]=="build"||args[5]=="destroy"||(args[5]=="keep"&&ctile.block()=="air")){
-              //if(args.length==3) Vars.world.tile(cx, cy).setNet(Blocks[cblock], cteam, crot);
+              //if(args.length==3) Vars.world.tile(cx, cy).setNet(cblock, cteam, crot);
               if(args.length==4){
                 if(args[3]>=0&&args[3]<=3) crot=args[3];
                 else throw "Rotation should be 0~3";
@@ -591,27 +603,27 @@ const commandblocks={
               if(cteam!==tile.team) cteam=Team.get(cteam);
               if(args[5]=="build"||args[5]=="destroy"){
                 if(Vars.world.tile(cx, cy).block().hasEntity()) Vars.world.tile(cx, cy).ent().damage(Vars.world.tile(cx, cy).ent().health()+1);
-                Call.onDeconstructFinish(Vars.world.tile(cx, cy), Blocks[cblock], 0);
-                Vars.world.tile(cx, cy).setBlock(Blocks[cblock], cteam, crot);
+                Call.onDeconstructFinish(Vars.world.tile(cx, cy), cblock, 0);
+                Vars.world.tile(cx, cy).setBlock(cblock, cteam, crot);
               }
               else{
                 if(Vars.world.tile(cx, cy).ent()) Vars.world.tile(cx, cy).ent().damage(Vars.world.tile(cx, cy).ent().health()+1);
-                Vars.world.tile(cx, cy).setBlock(Blocks[cblock], cteam, crot);
-                //Call.onConstructFinish(Vars.world.tile(cx, cy), Blocks[cblock], 0, crot, cteam, false);
+                Vars.world.tile(cx, cy).setBlock(cblock, cteam, crot);
+                //Call.onConstructFinish(Vars.world.tile(cx, cy), cblock, 0, crot, cteam, false);
                 //Call.beginBreak(Vars.world.tile(cx, cy).team, cx, cy);
                 /*
                 var entity=Vars.world.tile(cx, cy).ent();
                 Vars.world.tile(cx, cy).block().removed(Vars.world.tile(cx, cy));
                 Vars.world.tile(cx, cy).remove();
                 if(entity) entity.sleep();
-                Vars.world.tile(cx, cy).setBlock(Blocks[cblock], cteam, crot);
+                Vars.world.tile(cx, cy).setBlock(cblock, cteam, crot);
                 */
                 //Vars.world.tile(cx, cy).ent().init(Vars.world.tile(cx, cy),true);
                 //Vars.world.clearTileEntities();
               }
               if(args[5]=="build"){
                 //Call.onDeconstructFinish(ctile, ctile.block(), 0);
-                Call.onConstructFinish(Vars.world.tile(cx, cy), Blocks[cblock], 0, crot, cteam, false);
+                Call.onConstructFinish(Vars.world.tile(cx, cy), cblock, 0, crot, cteam, false);
                 Vars.world.tile(cx, cy).block().placed(Vars.world.tile(cx, cy));
               }else{
 
@@ -622,7 +634,7 @@ const commandblocks={
               crot=args[3];cteam=args[4];if(cteam==-1) cteam=tile.team;
               if(cteam!==tile.team) cteam=Team.get(cteam);
               //if(ctile.ent()!=null) ctile.ent().remove();
-              Vars.world.tile(cx, cy).setNet(Blocks[cblock], cteam, crot);
+              Vars.world.tile(cx, cy).setNet(cblock, cteam, crot);
               Vars.world.notifyChanged(Vars.world.tile(cx, cy));
               //Vars.world.tile(cx, cy).changed();
               return true;
@@ -1286,8 +1298,12 @@ const commandblocks={
     if(gamerule.commandBlockTitle) Vars.ui.showInfoToast("[scarlet]"+err+"[]",7);
     if(gamerule.commandBlockOutput&&gamerule.sendCommandFeedback) Call.sendMessage("[#aa0000]"+err.stack+"[]");
     //print("E:"+err);
+    if(parentthis.block().name == "commandblocks-commandb") parentthis.ent().setErr(err);
     return false;
   }
   }
 };
+var lflicker = "[accent]그렇다고 합니다. [sky]무언가[]를 찾으셨습니다고요.[]";
+var sharlotte = "[royal]이미 [orange]아이디어[]에 파뭍여 깔렸다고 합니다.[]";
+var upalupa = "[#ffaaff]처음부터 끝까지라고 합니다. [scarlet]딸기[]라고요.[]";
 this.global.commandblocks=commandblocks;
